@@ -1,14 +1,81 @@
-function Room(name, id, owner , serverkey) {
+// Include decencies
+var _ = require('underscore')._;
+
+/**
+ * Room
+ * @param name
+ * @param namespace
+ * @constructor
+ */
+function Room(name, namespace) {
     this.name = name;
-    this.id = id;
-    this.owner = owner;
-    this.serverkey = serverkey;
-    this.people = [];
+    this.namespace = namespace;
+    this.users = [];
     this.messageBuffer = [];
 };
 
-Room.prototype.addPerson = function (personID) {
-    this.people.push(personID);
+/**
+ * Add a user to a room
+ * @param chatobject
+ */
+Room.prototype.addUser = function (chatobject) {
+
+    var usr = _.clone(chatobject);
+    delete usr.broadcastkey;
+    delete usr.hostname;
+    delete usr.courseid;
+    delete usr.cmid;
+    delete usr.webcastid;
+    delete usr.shared_secret;
+    delete usr.message;
+    this.users.push(usr);
+};
+
+/**
+ * remove a user from a user
+ * @param id
+ */
+Room.prototype.removeUser = function (id) {
+
+    // Returns a copy of the array with all instances of the values removed.
+    var key = _.findWhere(this.users, {'id': id});
+    console.log('removeUser: ' + key);
+
+    if(!key){
+        return false;
+    }
+
+    this.users = _.without(this.users, key);
+
+    //Return new user count
+    return true;
+
+};
+
+/**
+ * Users in this room
+ * return int
+ */
+Room.prototype.getUserCount = function () {
+    console.log('getUserCount ' + this.name);
+    return _.size(this.users);
+};
+
+/**
+ * cleanup
+ */
+Room.prototype.cleanup = function () {
+    console.log('@todo send data to callback server');
+
+};
+
+/**
+ * Return all users
+ * return array
+ */
+Room.prototype.getAllUsers = function () {
+    // @todo maybe some parsing not everything need to be send to clients
+    return this.users;
 };
 
 /**
@@ -28,7 +95,14 @@ Room.prototype.addPerson = function (personID) {
  *
  * @param messageObject
  */
-Room.prototype.addMessage = function (messageObject) {
+Room.prototype.addMessage = function (messageObject, messagetype) {
+
+    // Set message
+    if (!messagetype) {
+        messagetype = 'default';
+    }
+
+    messageObject.messagetype = messagetype;
     this.messageBuffer.push(messageObject);
 };
 
@@ -36,15 +110,15 @@ Room.prototype.forwardMessagesToDBServer = function () {
 
     //The url we want is `www.nodejitsu.com:1337/`
     var options = {
-        host: 'www.nodejitsu.com',
-        path: '/',
+        host  : 'www.nodejitsu.com',
+        path  : '/',
         //since we are listening on a custom port, we need to specify it by hand
-        port: '1337',
+        port  : '80',
         //This is what changes the request to a POST request
         method: 'POST'
     };
 
-    var callback = function(response) {
+    var callback = function (response) {
 
         var str = ''
         response.on('data', function (chunk) {
@@ -62,7 +136,5 @@ Room.prototype.forwardMessagesToDBServer = function () {
     req.write("hello world!");
     req.end();
 };
-
-
 
 module.exports = Room;
