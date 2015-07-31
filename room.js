@@ -2,15 +2,19 @@
 var _ = require('underscore')._;
 // Caja's stand-alone HTML sanitizer for node
 var sanitizer = require('caja-sanitizer');
+// Send request
+var request = require('request');
 /**
  * Room
  * @param name
  * @param namespace
  * @constructor
  */
-function Room(name, namespace) {
+function Room(name, namespace, callback, shared_secret) {
     this.name = name;
     this.namespace = namespace;
+    this.shared_secret = shared_secret;
+    this.callback = callback;
     this.users = [];
     this.messageBuffer = [];
 };
@@ -42,7 +46,7 @@ Room.prototype.removeUser = function (id) {
     var key = _.findWhere(this.users, {'id': id});
     console.log('removeUser: ' + key);
 
-    if(!key){
+    if (!key) {
         return false;
     }
 
@@ -51,6 +55,15 @@ Room.prototype.removeUser = function (id) {
     //Return new user count
     return true;
 
+};
+
+/**
+ * Messages in the buffer
+ * return int
+ */
+Room.prototype.getMessagesCount = function () {
+    console.log('getMessagesCount ' + this.name);
+    return _.size(this.messageBuffer);
 };
 
 /**
@@ -81,19 +94,6 @@ Room.prototype.getAllUsers = function () {
 
 /**
  * messageObject
- * messages: {
- * {
- *      'courseid' => 0,
- *      'user_id' => 0,
- *      'fullname' => "",
- *      'roomid' => "",
- *      'message' => "",
- *      'device' => "",
- *      'ip_address' => "",
- *      'timestamp' => 0,
- * },
- * }
- *
  * @param messageObject
  */
 Room.prototype.addMessage = function (messageObject, messagetype) {
@@ -119,35 +119,43 @@ Room.prototype.addMessage = function (messageObject, messagetype) {
     return msg;
 };
 
-Room.prototype.forwardMessagesToDBServer = function () {
+Room.prototype.updateBufferSize = function(size){
+    this.messageBuffer.splice(0, size);
+}
 
-    //The url we want is `www.nodejitsu.com:1337/`
+Room.prototype.forwardMessagesToDBServer = function () {
+    var that = this; // reference needed for callback
+    var buffer = _.clone(this.messageBuffer);
+
     var options = {
-        host  : 'www.nodejitsu.com',
-        path  : '/',
-        //since we are listening on a custom port, we need to specify it by hand
-        port  : '80',
-        //This is what changes the request to a POST request
-        method: 'POST'
+        url    : this.callback,
+        method : "POST",
+        json   : {
+            'messages'     : buffer,
+            'shared_secret': this.shared_secret,
+            'broadcastkey' : this.name
+        },
+        headers: {
+            'Content-Type': 'application/json'
+        },
     };
 
-    var callback = function (response) {
+    //send request
+    request(options,  function(error, response, body) {
+        if (!error) {
+            var info = JSON.parse(JSON.stringify(body));
 
-        var str = ''
-        response.on('data', function (chunk) {
-            str += chunk;
-        });
+            if(info.status === true){
+                console.log('Server has saved the messages we can remove them!');
+                that.updateBufferSize(buffer.length);
+            }
 
-        response.on('end', function () {
-            console.log(str);
-        });
-    }
-
-    var req = http.request(options, callback);
-
-    //This is the data we are posting, it needs to be a string or a buffer
-    req.write("hello world!");
-    req.end();
+            console.log(info);
+        }
+        else {
+            console.log('Error happened: ' + error);
+        }
+    });
 };
 
 module.exports = Room;

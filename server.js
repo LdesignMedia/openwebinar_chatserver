@@ -65,7 +65,7 @@ function join(socket , chatobject , fn){
     // Use namespace to allow more environment to connect
     var roomname = Util.getRoomNameFromChatobject(chatobject);
     if(typeof rooms[socket.namespace][roomname] ===  'undefined'){
-        rooms[socket.namespace][roomname]  = new Room(roomname, socket.namespace);
+        rooms[socket.namespace][roomname]  = new Room(roomname, socket.namespace , valid.callback , chatobject.shared_secret);
     }
 
     // Reference
@@ -161,3 +161,30 @@ io.sockets.on("connection", function (socket) {
         sockets = _.without(sockets, o);
     });
 });
+
+// Send the room buffers to DB servers
+var interval = setInterval(function() {
+    console.log('Cron check buffers');
+
+    // Loop
+    for(var namespace in rooms){
+        console.log(namespace);
+        for(var roomname in rooms[namespace]){
+            console.log(roomname);
+
+            var room = rooms[namespace][roomname];
+            var count = room.getMessagesCount();
+            console.log('Messages: ' + count);
+
+            if(count > 0){
+                // send to a server
+                room.forwardMessagesToDBServer();
+            }
+        }
+    }
+
+}, 60000); // 1 minute
+
+// On failure clear buffers
+
+// On close clear buffers
