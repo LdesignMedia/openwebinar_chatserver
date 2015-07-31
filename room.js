@@ -1,6 +1,7 @@
 // Include decencies
 var _ = require('underscore')._;
-
+// Caja's stand-alone HTML sanitizer for node
+var sanitizer = require('caja-sanitizer');
 /**
  * Room
  * @param name
@@ -101,9 +102,21 @@ Room.prototype.addMessage = function (messageObject, messagetype) {
     if (!messagetype) {
         messagetype = 'default';
     }
+    var msg = _.clone(messageObject);
+    msg.messagetype = messagetype;
 
-    messageObject.messagetype = messagetype;
-    this.messageBuffer.push(messageObject);
+    delete msg.broadcastkey;
+    delete msg.hostname;
+    delete msg.courseid;
+    delete msg.cmid;
+    delete msg.webcastid;
+    delete msg.shared_secret;
+
+    // Cleanup the string for save usage
+    msg.message = sanitizer.sanitize(msg.message);
+    msg.timestamp = Math.round(new Date().getTime() / 1000);
+    this.messageBuffer.push(msg);
+    return msg;
 };
 
 Room.prototype.forwardMessagesToDBServer = function () {

@@ -22,10 +22,8 @@ var uuid = require('node-uuid');
 var _ = require('underscore')._;
 
 // Caja's stand-alone HTML sanitizer for node
-var sanitizer = require('caja-sanitizer');
-
-var Room = require('./room.js');
 var Util = require('./util.js')();
+var Room = require('./room.js');
 
 // Start server
 server.listen(config.port, function () {
@@ -40,211 +38,6 @@ io.on('connection', function (client) {
     var address = client.handshake.address;
     console.log("New connection from " + address);
 });
-
-function purge(s, action) {
-
-    console.log('purge(' + action + ')');
-
-    /*
-     The action will determine how we deal with the room/user removal.
-     These are the following scenarios:
-     if the user is the owner and (s)he:
-     1) disconnects (i.e. leaves the whole server)
-     - advise users
-     - delete user from users object
-     - delete room from rooms object
-     - delete chat history
-     - remove all users from room that is owned by disconnecting user
-     2) removes the room
-     - same as above except except not removing user from the users object
-     3) leaves the room
-     - same as above
-     if the user is not an owner and (s)he's in a room:
-     1) disconnects
-     - delete user from users object
-     - remove user from room.users object
-     2) removes the room
-     - produce error message (only owners can remove rooms)
-     3) leaves the room
-     - same as point 1 except not removing user from the users object
-     if the user is not an owner and not in a room:
-     1) disconnects
-     - same as above except not removing user from room.users object
-     2) removes the room
-     - produce error message (only owners can remove rooms)
-     3) leaves the room
-     - n/a
-     */
-
-    if (people[s.id].inroom) {
-
-        //user is in a room
-        var room = rooms[people[s.id].inroom];
-
-        // check which room user is in.
-        // user in room and owns room
-        if (s.id === room.owner) {
-
-            if (action === "disconnect") {
-                io.sockets.in(s.room).emit("update", "The owner (" + people[s.id].name + ") has left the server. The room is removed and you have been disconnected from it as well.");
-
-                var socketids = [];
-                for (var i = 0; i < sockets.length; i++) {
-                    socketids.push(sockets[i].id);
-                    if (_.contains((socketids)), room.users) {
-                        sockets[i].leave(room.name);
-                    }
-                }
-
-                if (_.contains((room.users)), s.id) {
-                    for (var i = 0; i < room.users.length; i++) {
-                        people[room.users[i]].inroom = null;
-                    }
-                }
-
-                //remove users from the room:users{}collection
-                room.users = _.without(room.users, s.id);
-
-                //delete the room
-                delete rooms[people[s.id].owns];
-
-                //delete user from users collection
-                delete people[s.id];
-
-                //delete the chat history
-                delete chatHistory[room.name];
-
-                var sizePeople = _.size(people);
-                var sizeRooms = _.size(rooms);
-
-                io.emit("update-users", {
-                    users: people,
-                    count : sizePeople
-                });
-                io.emit("roomList", {
-                    rooms: rooms,
-                    count: sizeRooms
-                });
-
-                var o = _.findWhere(sockets, {'id': s.id});
-                sockets = _.without(sockets, o);
-
-            } else if (action === "removeRoom") { //room owner removes room
-
-                io.sockets.in(s.room).emit("update", "The owner (" + people[s.id].name + ") has removed the room. The room is removed and you have been disconnected from it as well.");
-                var socketids = [];
-
-                for (var i = 0; i < sockets.length; i++) {
-                    socketids.push(sockets[i].id);
-                    if (_.contains((socketids)), room.users) {
-                        sockets[i].leave(room.name);
-                    }
-                }
-
-                if (_.contains((room.users)), s.id) {
-                    for (var i = 0; i < room.users.length; i++) {
-                        people[room.users[i]].inroom = null;
-                    }
-                }
-
-                delete rooms[people[s.id].owns];
-                people[s.id].owns = null;
-                room.users = _.without(room.users, s.id); //remove users from the room:users{}collection
-                delete chatHistory[room.name]; //delete the chat history
-
-                var sizeRooms = _.size(rooms);
-                io.emit("roomList", {
-                    rooms: rooms,
-                    count: sizeRooms
-                });
-
-            } else if (action === "leaveRoom") { //room owner leaves room
-
-                io.sockets.in(s.room).emit("update", "The owner (" + people[s.id].name + ") has left the room. The room is removed and you have been disconnected from it as well.");
-
-                var socketids = [];
-
-                for (var i = 0; i < sockets.length; i++) {
-                    socketids.push(sockets[i].id);
-                    if (_.contains((socketids)), room.users) {
-                        sockets[i].leave(room.name);
-                    }
-                }
-
-                if (_.contains((room.users)), s.id) {
-                    for (var i = 0; i < room.users.length; i++) {
-                        people[room.users[i]].inroom = null;
-                    }
-                }
-
-                delete rooms[people[s.id].owns];
-                people[s.id].owns = null;
-                room.users = _.without(room.users, s.id); //remove users from the room:users{}collection
-                delete chatHistory[room.name]; //delete the chat history
-                sizeRooms = _.size(rooms);
-                io.emit("roomList", {
-                    rooms: rooms,
-                    count: sizeRooms
-                });
-            }
-        } else {
-
-            //user in room but does not own room
-            if (action === "disconnect") {
-
-                io.emit("update", people[s.id].name + " has disconnected from the server.");
-                if (_.contains((room.users), s.id)) {
-                    var personIndex = room.users.indexOf(s.id);
-                    room.users.splice(personIndex, 1);
-                    s.leave(room.name);
-                }
-
-                delete people[s.id];
-                sizePeople = _.size(people);
-                io.emit("update-users", {
-                    users: people,
-                    count : sizePeople
-                });
-
-                var o = _.findWhere(sockets, {'id': s.id});
-                sockets = _.without(sockets, o);
-
-            } else if (action === "removeRoom") {
-
-                s.emit("update", "Only the owner can remove a room.");
-
-            } else if (action === "leaveRoom") {
-
-                if (_.contains((room.users), s.id)) {
-                    var personIndex = room.users.indexOf(s.id);
-                    room.users.splice(personIndex, 1);
-                    people[s.id].inroom = null;
-                    io.emit("update", people[s.id].name + " has left the room.");
-                    s.leave(room.name);
-                }
-
-            }
-        }
-    }
-    else {
-
-        //The user isn't in a room, but maybe he just disconnected, handle the scenario:
-        if (action === "disconnect") {
-
-            io.emit("update", people[s.id].name + " has disconnected from the server.");
-            delete people[s.id];
-
-            var sizePeople = _.size(people);
-            io.emit("update-users", {
-                users: people,
-                count : sizePeople
-            });
-
-            var o = _.findWhere(sockets, {'id': s.id});
-            sockets = _.without(sockets, o);
-        }
-    }
-}
 
 function join(socket , chatobject , fn){
 
@@ -294,8 +87,6 @@ function join(socket , chatobject , fn){
     fn({'status': true});
 }
 
-
-
 io.sockets.on("connection", function (socket) {
 
     // Set some defaults
@@ -309,6 +100,7 @@ io.sockets.on("connection", function (socket) {
     socket.on("send", function (chatobject , fn) {
 
         if(!socket.has_access || socket.namespace == ""){
+
             // Maybe got disconnected???
             join(socket , chatobject , fn);
 
@@ -319,15 +111,22 @@ io.sockets.on("connection", function (socket) {
         }
 
         var roomname = Util.getRoomNameFromChatobject(chatobject);
-        if (io.nsps[socket.namespace].adapter.rooms[roomname] !== undefined) {
+        var roomobj = io.sockets.adapter.rooms[roomname];
 
-            io.sockets.in(roomname).emit("update-user-list", {
+        if (typeof roomobj !== 'undefined' ) {
 
-            });
+            var room = rooms[socket.namespace][roomname];
+
+            // Set the message to the room
+            var message = room.addMessage(chatobject);
+
+            // Send to clients
+            io.sockets.in(roomname).emit("update-chat", message);
 
             fn({'status' : true});
 
         }else{
+            console.log( 'unknown_room');
             fn({'status' : false, 'error' : 'unknown_room'});
         }
     });
@@ -346,7 +145,6 @@ io.sockets.on("connection", function (socket) {
                 }
 
                 console.log('update-user-list');
-
                 io.sockets.in(roomname).emit("update-user-list", {
                     users: room.getAllUsers(),
                     count : room.getUserCount()
