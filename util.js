@@ -28,8 +28,7 @@ module.exports = function Util() {
                 return {
                     status   : true,
                     namespace: config.servers[token].namespace,
-                    callback: config.servers[token].callback,
-                    callback: config.servers[token].callback,
+                    callback: config.servers[token].callback
                 };
             }
             return {

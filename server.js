@@ -39,7 +39,7 @@ io.on('connection', function (client) {
     console.log("New connection from " + address);
 });
 
-function join(socket , chatobject , fn){
+function join(socket, chatobject, fn) {
 
     console.log("join");
     console.log(chatobject);
@@ -64,8 +64,8 @@ function join(socket , chatobject , fn){
 
     // Use namespace to allow more environment to connect
     var roomname = Util.getRoomNameFromChatobject(chatobject);
-    if(typeof rooms[socket.namespace][roomname] ===  'undefined'){
-        rooms[socket.namespace][roomname]  = new Room(roomname, socket.namespace , valid.callback , chatobject.shared_secret);
+    if (typeof rooms[socket.namespace][roomname] === 'undefined') {
+        rooms[socket.namespace][roomname] = new Room(roomname, socket.namespace, valid.callback, chatobject.shared_secret);
     }
 
     // Reference
@@ -78,7 +78,8 @@ function join(socket , chatobject , fn){
     // Only send userlist update to correct room
     io.sockets.in(roomname).emit("update-user-list", {
         users: room.getAllUsers(),
-        count : room.getUserCount()
+        count: room.getUserCount(),
+        status : true
     });
 
     // Add the socket to a container
@@ -94,18 +95,46 @@ io.sockets.on("connection", function (socket) {
     socket.namespace = "";
 
     socket.on("join", function (chatobject, fn) {
-        join(socket , chatobject , fn);
+        join(socket, chatobject, fn);
     });
 
-    socket.on("send", function (chatobject , fn) {
+    socket.on("get-userlist", function (chatobject, fn) {
 
-        if(!socket.has_access || socket.namespace == ""){
+        if (!socket.has_access || socket.namespace == "") {
 
             // Maybe got disconnected???
-            join(socket , chatobject , fn);
+            join(socket, chatobject, fn);
 
             // Stop invalid calls
-            if(!socket.has_access){
+            if (!socket.has_access) {
+                return;
+            }
+        }
+
+        var roomname = Util.getRoomNameFromChatobject(chatobject);
+
+        if (rooms[socket.namespace][roomname] !== undefined) {
+            var room = rooms[socket.namespace][roomname];
+            fn({
+                status: true,
+                users: room.getAllUsers(),
+                count: room.getUserCount()
+            });
+            return;
+        }
+
+        fn({status: false});
+    });
+
+    socket.on("send", function (chatobject, fn) {
+
+        if (!socket.has_access || socket.namespace == "") {
+
+            // Maybe got disconnected???
+            join(socket, chatobject, fn);
+
+            // Stop invalid calls
+            if (!socket.has_access) {
                 return;
             }
         }
@@ -113,7 +142,7 @@ io.sockets.on("connection", function (socket) {
         var roomname = Util.getRoomNameFromChatobject(chatobject);
         var roomobj = io.sockets.adapter.rooms[roomname];
 
-        if (typeof roomobj !== 'undefined' ) {
+        if (typeof roomobj !== 'undefined') {
 
             var room = rooms[socket.namespace][roomname];
 
@@ -123,11 +152,14 @@ io.sockets.on("connection", function (socket) {
             // Send to clients
             io.sockets.in(roomname).emit("update-chat", message);
 
-            fn({'status' : true});
+            fn({'status': true});
 
-        }else{
-            console.log( 'unknown_room');
-            fn({'status' : false, 'error' : 'unknown_room'});
+        } else {
+            console.log('unknown_room');
+            fn({
+                'status': false,
+                'error' : 'unknown_room'
+            });
         }
     });
 
@@ -135,11 +167,11 @@ io.sockets.on("connection", function (socket) {
         console.log("disconnect");
 
         // Remove this user from all possible rooms
-        for(var roomname in rooms[socket.namespace]){
+        for (var roomname in rooms[socket.namespace]) {
             var room = rooms[socket.namespace][roomname];
-            if(room.removeUser(socket.id)){
+            if (room.removeUser(socket.id)) {
 
-                if(room.getUserCount() == 0){
+                if (room.getUserCount() == 0) {
                     console.log('Nobody in the room anymore.. we should cleanup');
                     room.cleanup();
                 }
@@ -147,10 +179,10 @@ io.sockets.on("connection", function (socket) {
                 console.log('update-user-list');
                 io.sockets.in(roomname).emit("update-user-list", {
                     users: room.getAllUsers(),
-                    count : room.getUserCount()
+                    count: room.getUserCount()
                 });
 
-            }else{
+            } else {
                 console.log('You are not in this room!');
             }
         }
@@ -163,20 +195,20 @@ io.sockets.on("connection", function (socket) {
 });
 
 // Send the room buffers to DB servers
-var interval = setInterval(function() {
+var interval = setInterval(function () {
     console.log('Cron check buffers');
 
     // Loop
-    for(var namespace in rooms){
+    for (var namespace in rooms) {
         console.log(namespace);
-        for(var roomname in rooms[namespace]){
+        for (var roomname in rooms[namespace]) {
             console.log(roomname);
 
             var room = rooms[namespace][roomname];
             var count = room.getMessagesCount();
             console.log('Messages: ' + count);
 
-            if(count > 0){
+            if (count > 0) {
                 // send to a server
                 room.forwardMessagesToDBServer();
             }
