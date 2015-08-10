@@ -179,7 +179,8 @@ io.sockets.on("connection", function (socket) {
                 console.log('update-user-list');
                 io.sockets.in(roomname).emit("update-user-list", {
                     users: room.getAllUsers(),
-                    count: room.getUserCount()
+                    count: room.getUserCount(),
+                    status : true
                 });
 
             } else {

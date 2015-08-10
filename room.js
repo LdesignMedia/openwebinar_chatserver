@@ -4,6 +4,9 @@ var _ = require('underscore')._;
 var sanitizer = require('caja-sanitizer');
 // Send request
 var request = require('request');
+
+// Useragent parser
+var userAgentParser = require('ua-parser-js');
 /**
  * Room
  * @param name
@@ -33,6 +36,10 @@ Room.prototype.addUser = function (chatobject) {
     delete usr.webcastid;
     delete usr.shared_secret;
     delete usr.message;
+
+    // convert useragent to something more usable
+    usr.useragent = userAgentParser(usr.useragent);
+    console.log(usr.useragent);
     this.users.push(usr);
 };
 
