@@ -77,9 +77,9 @@ function join(socket, chatobject, fn) {
 
     // Only send userlist update to correct room
     io.sockets.in(roomname).emit("update-user-list", {
-        users: room.getAllUsers(),
-        count: room.getUserCount(),
-        status : true
+        users : room.getAllUsers(),
+        count : room.getUserCount(),
+        status: true
     });
 
     // Add the socket to a container
@@ -117,10 +117,35 @@ io.sockets.on("connection", function (socket) {
             var room = rooms[socket.namespace][roomname];
             fn({
                 status: true,
-                users: room.getAllUsers(),
-                count: room.getUserCount()
+                users : room.getAllUsers(),
+                count : room.getUserCount()
             });
             return;
+        }
+
+        fn({status: false});
+    });
+
+    socket.on("mute", function (chatobject, mute_usertype, value, fn) {
+        if (!socket.has_access || socket.namespace == "") {
+
+            // Maybe got disconnected???
+            join(socket, chatobject, fn);
+
+            // Stop invalid calls
+            if (!socket.has_access) {
+                return;
+            }
+        }
+
+        var roomname = Util.getRoomNameFromChatobject(chatobject);
+        if (rooms[socket.namespace][roomname] !== undefined) {
+            var room = rooms[socket.namespace][roomname];
+            if(chatobject.usertype == 'broadcaster') {
+                fn({status: true , mute: room.setMute(mute_usertype , value)});
+            } else {
+                fn({status: false , 'error' : 'your_not_a_broadcaster'});
+            }
         }
 
         fn({status: false});
@@ -145,6 +170,14 @@ io.sockets.on("connection", function (socket) {
         if (typeof roomobj !== 'undefined') {
 
             var room = rooms[socket.namespace][roomname];
+
+            if(!room.canType(chatobject)){
+                fn({
+                    'status': false,
+                    'error' : 'muted'
+                });
+                return;
+            }
 
             // Set the message to the room
             var message = room.addMessage(chatobject);
@@ -178,9 +211,9 @@ io.sockets.on("connection", function (socket) {
 
                 console.log('update-user-list');
                 io.sockets.in(roomname).emit("update-user-list", {
-                    users: room.getAllUsers(),
-                    count: room.getUserCount(),
-                    status : true
+                    users : room.getAllUsers(),
+                    count : room.getUserCount(),
+                    status: true
                 });
 
             } else {

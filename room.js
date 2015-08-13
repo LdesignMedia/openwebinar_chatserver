@@ -17,6 +17,9 @@ function Room(name, namespace, callback, shared_secret) {
     this.name = name;
     this.namespace = namespace;
     this.shared_secret = shared_secret;
+    this.mute_guest = true;
+    this.mute_student = false;
+    this.mute_teacher = false;
     this.callback = callback;
     this.users = [];
     this.messageBuffer = [];
@@ -42,6 +45,55 @@ Room.prototype.addUser = function (chatobject) {
     console.log(usr.useragent);
     this.users.push(usr);
 };
+
+/**
+ * Mute a user for typing
+ * @param userType
+ * @param value
+ * @returns {*}
+ */
+Room.prototype.setMute = function (userType, value) {
+
+    switch (userType) {
+        case 'guest':
+            this.mute_guest = Boolean(value);
+            return this.mute_guest;
+
+        case 'student':
+            this.mute_student = Boolean(value);
+            return this.mute_student;
+
+        case 'teacher':
+            this.mute_teacher = Boolean(value);
+            return this.mute_teacher;
+    }
+    return null;
+}
+
+/**
+ * Check if a user can type
+ * @param chatobject
+ * @returns boolean
+ */
+Room.prototype.canType = function (chatobject) {
+
+    switch (chatobject.usertype) {
+        case 'broadcaster':
+            // can always send messages
+            return true;
+
+        case 'guest':
+            return !this.mute_guest;
+
+        case 'student':
+            return !this.mute_student;
+
+        case 'teacher':
+            return !this.mute_teacher;
+    }
+
+    return false;
+}
 
 /**
  * remove a user from a user
@@ -126,7 +178,7 @@ Room.prototype.addMessage = function (messageObject, messagetype) {
     return msg;
 };
 
-Room.prototype.updateBufferSize = function(size){
+Room.prototype.updateBufferSize = function (size) {
     this.messageBuffer.splice(0, size);
 }
 
@@ -148,11 +200,11 @@ Room.prototype.forwardMessagesToDBServer = function () {
     };
 
     //send request
-    request(options,  function(error, response, body) {
+    request(options, function (error, response, body) {
         if (!error) {
             var info = JSON.parse(JSON.stringify(body));
 
-            if(info.status === true){
+            if (info.status === true) {
                 console.log('Server has saved the messages we can remove them!');
                 that.updateBufferSize(buffer.length);
             }
