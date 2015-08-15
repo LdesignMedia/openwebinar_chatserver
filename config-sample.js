@@ -31,6 +31,16 @@ config.servers = {
          */
         callback : 'http://example.com/mod/webcast/api.php?action=chatlog'
     },
+
+    /**
+     *  Note: you could add more servers on a single node chat server
+     *
+     * 'dcba987654321': {
+        hostname : 'example2.com',
+        namespace : 'example2_live',
+        callback : 'http://example2.com/mod/webcast/api.php?action=chatlog'
+        },
+     */
 };
 
 /**

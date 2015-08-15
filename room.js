@@ -196,7 +196,7 @@ Room.prototype.forwardMessagesToDBServer = function () {
         },
         headers: {
             'Content-Type': 'application/json'
-        },
+        }
     };
 
     //send request

@@ -58,13 +58,13 @@ function join(socket, chatobject, fn) {
     socket.namespace = valid.namespace;
 
     // Check if the roomnamespace is set
-    if (typeof rooms[socket.namespace] === 'undefined') {
+    if (rooms[socket.namespace] === undefined) {
         rooms[socket.namespace] = [];
     }
 
     // Use namespace to allow more environment to connect
     var roomname = Util.getRoomNameFromChatobject(chatobject);
-    if (typeof rooms[socket.namespace][roomname] === 'undefined') {
+    if (rooms[socket.namespace][roomname] === undefined) {
         rooms[socket.namespace][roomname] = new Room(roomname, socket.namespace, valid.callback, chatobject.shared_secret);
     }
 
@@ -88,6 +88,34 @@ function join(socket, chatobject, fn) {
     fn({'status': true});
 }
 
+/**
+ * Validate the call and return a room object
+ * @param socket
+ * @param chatobject
+ * @param fn
+ * @returns Room|false
+ */
+function validAccessAndReturnRoom(socket, chatobject, fn) {
+
+    if (!socket.has_access || socket.namespace === "") {
+
+        // Maybe got disconnected???
+        join(socket, chatobject, fn);
+
+        // Stop invalid calls
+        if (!socket.has_access) {
+            return false;
+        }
+    }
+
+    var roomname = Util.getRoomNameFromChatobject(chatobject);
+    if (rooms[socket.namespace][roomname] !== undefined) {
+        console.log('Found Room()');
+        return rooms[socket.namespace][roomname];
+    }
+    return false;
+}
+
 io.sockets.on("connection", function (socket) {
 
     // Set some defaults
@@ -105,21 +133,9 @@ io.sockets.on("connection", function (socket) {
      * End the webcast & unload/remove the room from chat server
      */
     socket.on("ending", function (chatobject, fn) {
-        if (!socket.has_access || socket.namespace == "") {
-
-            // Maybe got disconnected???
-            join(socket, chatobject, fn);
-
-            // Stop invalid calls
-            if (!socket.has_access) {
-                return;
-            }
-        }
-
-        var roomname = Util.getRoomNameFromChatobject(chatobject);
-
-        if (rooms[socket.namespace][roomname] !== undefined) {
-            if(chatobject.usertype == 'broadcaster') {
+        var room = validAccessAndReturnRoom(socket, chatobject, fn);
+        if (typeof room === 'object') {
+            if (chatobject.usertype === 'broadcaster') {
                 // only the broadcaster can do this
             }
         }
@@ -130,22 +146,8 @@ io.sockets.on("connection", function (socket) {
      * Get the latest userlist in from the room
      */
     socket.on("get-userlist", function (chatobject, fn) {
-
-        if (!socket.has_access || socket.namespace == "") {
-
-            // Maybe got disconnected???
-            join(socket, chatobject, fn);
-
-            // Stop invalid calls
-            if (!socket.has_access) {
-                return;
-            }
-        }
-
-        var roomname = Util.getRoomNameFromChatobject(chatobject);
-
-        if (rooms[socket.namespace][roomname] !== undefined) {
-            var room = rooms[socket.namespace][roomname];
+        var room = validAccessAndReturnRoom(socket, chatobject, fn);
+        if (typeof room === 'object') {
             fn({
                 status: true,
                 users : room.getAllUsers(),
@@ -153,7 +155,6 @@ io.sockets.on("connection", function (socket) {
             });
             return;
         }
-
         fn({status: false});
     });
 
@@ -161,24 +162,19 @@ io.sockets.on("connection", function (socket) {
      * Mute a usertype
      */
     socket.on("mute", function (chatobject, mute_usertype, value, fn) {
-        if (!socket.has_access || socket.namespace == "") {
 
-            // Maybe got disconnected???
-            join(socket, chatobject, fn);
-
-            // Stop invalid calls
-            if (!socket.has_access) {
-                return;
-            }
-        }
-
-        var roomname = Util.getRoomNameFromChatobject(chatobject);
-        if (rooms[socket.namespace][roomname] !== undefined) {
-            var room = rooms[socket.namespace][roomname];
-            if(chatobject.usertype == 'broadcaster') {
-                fn({status: true , mute: room.setMute(mute_usertype , value)});
+        var room = validAccessAndReturnRoom(socket, chatobject, fn);
+        if (typeof room === 'object') {
+            if (chatobject.usertype === 'broadcaster') {
+                fn({
+                    status: true,
+                    mute  : room.setMute(mute_usertype, value)
+                });
             } else {
-                fn({status: false , 'error' : 'your_not_a_broadcaster'});
+                fn({
+                    status : false,
+                    'error': 'your_not_a_broadcaster'
+                });
             }
         }
 
@@ -190,25 +186,12 @@ io.sockets.on("connection", function (socket) {
      */
     socket.on("send", function (chatobject, fn) {
 
-        if (!socket.has_access || socket.namespace == "") {
+        var room = validAccessAndReturnRoom(socket, chatobject, fn);
+        console.log(typeof room);
+        if (typeof room === 'object') {
+            console.log('valid room');
 
-            // Maybe got disconnected???
-            join(socket, chatobject, fn);
-
-            // Stop invalid calls
-            if (!socket.has_access) {
-                return;
-            }
-        }
-
-        var roomname = Util.getRoomNameFromChatobject(chatobject);
-        var roomobj = io.sockets.adapter.rooms[roomname];
-
-        if (typeof roomobj !== 'undefined') {
-
-            var room = rooms[socket.namespace][roomname];
-
-            if(!room.canType(chatobject)){
+            if (!room.canType(chatobject)) {
                 fn({
                     'status': false,
                     'error' : 'muted'
@@ -216,11 +199,8 @@ io.sockets.on("connection", function (socket) {
                 return;
             }
 
-            // Set the message to the room
-            var message = room.addMessage(chatobject);
-
             // Send to clients
-            io.sockets.in(roomname).emit("update-chat", message);
+            io.sockets.in(room.name).emit("update-chat", room.addMessage(chatobject));
 
             fn({'status': true});
 
@@ -291,6 +271,6 @@ var interval = setInterval(function () {
 
 }, 60000); // 1 minute
 
-// On failure clear buffers
+// @todo On failure clear buffers
 
-// On close clear buffers
+// @todo On close clear buffers
