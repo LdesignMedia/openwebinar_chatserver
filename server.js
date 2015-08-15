@@ -94,10 +94,41 @@ io.sockets.on("connection", function (socket) {
     socket.has_access = false;
     socket.namespace = "";
 
+    /**
+     * Join the chatroom
+     */
     socket.on("join", function (chatobject, fn) {
         join(socket, chatobject, fn);
     });
 
+    /**
+     * End the webcast & unload/remove the room from chat server
+     */
+    socket.on("ending", function (chatobject, fn) {
+        if (!socket.has_access || socket.namespace == "") {
+
+            // Maybe got disconnected???
+            join(socket, chatobject, fn);
+
+            // Stop invalid calls
+            if (!socket.has_access) {
+                return;
+            }
+        }
+
+        var roomname = Util.getRoomNameFromChatobject(chatobject);
+
+        if (rooms[socket.namespace][roomname] !== undefined) {
+            if(chatobject.usertype == 'broadcaster') {
+                // only the broadcaster can do this
+            }
+        }
+
+    });
+
+    /**
+     * Get the latest userlist in from the room
+     */
     socket.on("get-userlist", function (chatobject, fn) {
 
         if (!socket.has_access || socket.namespace == "") {
@@ -126,6 +157,9 @@ io.sockets.on("connection", function (socket) {
         fn({status: false});
     });
 
+    /**
+     * Mute a usertype
+     */
     socket.on("mute", function (chatobject, mute_usertype, value, fn) {
         if (!socket.has_access || socket.namespace == "") {
 
@@ -151,6 +185,9 @@ io.sockets.on("connection", function (socket) {
         fn({status: false});
     });
 
+    /**
+     * Send a chat message to the room clients
+     */
     socket.on("send", function (chatobject, fn) {
 
         if (!socket.has_access || socket.namespace == "") {
@@ -196,6 +233,9 @@ io.sockets.on("connection", function (socket) {
         }
     });
 
+    /**
+     * Client disconnect
+     */
     socket.on("disconnect", function () {
         console.log("disconnect");
 
