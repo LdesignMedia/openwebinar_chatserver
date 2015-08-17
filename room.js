@@ -14,16 +14,45 @@ var userAgentParser = require('ua-parser-js');
  * @constructor
  */
 function Room(name, namespace, callback, shared_secret) {
+
     this.name = name;
     this.namespace = namespace;
     this.shared_secret = shared_secret;
     this.mute_guest = true;
     this.mute_student = false;
     this.mute_teacher = false;
+    this.broadcaster_identifier = "";
     this.callback = callback;
     this.users = [];
     this.messageBuffer = [];
-};
+
+    var that    = this, // reference needed for callback
+        options = {
+            url    : callback + '?action=broadcastinfo',
+            method : "POST",
+            json   : {
+                'shared_secret': shared_secret,
+                'broadcastkey' : name
+            },
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+    // query the broadcast identifier for validation
+    // send request
+    request(options, function (error, response, body) {
+        if (!error) {
+            var info = JSON.parse(JSON.stringify(body));
+            if (info.status === true) {
+                that.broadcaster_identifier = info.webcast.broadcaster_identifier;
+            }
+        }
+        else {
+            console.log('Error happened: ' + error);
+        }
+    });
+}
 
 /**
  * Add a user to a room
@@ -68,6 +97,22 @@ Room.prototype.setMute = function (userType, value) {
             return this.mute_teacher;
     }
     return null;
+}
+
+/**
+ * Validate the broadcaster_identifier
+ * @param chatobject
+ * @returns {boolean}
+ */
+Room.prototype.validateBroadcasterIdentifier = function (chatobject) {
+
+    console.log(this.broadcaster_identifier);
+    if (chatobject.broadcaster_identifier !== "" &&
+        this.broadcaster_identifier === chatobject.broadcaster_identifier) {
+
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -187,7 +232,7 @@ Room.prototype.forwardMessagesToDBServer = function () {
     var buffer = _.clone(this.messageBuffer);
 
     var options = {
-        url    : this.callback,
+        url    : this.callback + '?action=chatlog',
         method : "POST",
         json   : {
             'messages'     : buffer,

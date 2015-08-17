@@ -135,11 +135,27 @@ io.sockets.on("connection", function (socket) {
     socket.on("ending", function (chatobject, fn) {
         var room = validAccessAndReturnRoom(socket, chatobject, fn);
         if (typeof room === 'object') {
-            if (chatobject.usertype === 'broadcaster') {
+            if (chatobject.usertype === 'broadcaster' && room.validateBroadcasterIdentifier(chatobject)) {
+                console.log('OK');
                 // only the broadcaster can do this
+                io.sockets.in(room.name).emit("webcast-ended", {
+                    status: true
+                });
+
+                var count = room.getMessagesCount();
+                console.log('Messages: ' + count);
+
+                if (count > 0) {
+                    // send to a server
+                    room.forwardMessagesToDBServer();
+                }
+                delete room;
+
+                fn({status: true});
+                return;
             }
         }
-
+        fn({status: false});
     });
 
     /**
@@ -162,19 +178,25 @@ io.sockets.on("connection", function (socket) {
      * Mute a usertype
      */
     socket.on("mute", function (chatobject, mute_usertype, value, fn) {
-
+        console.log('mute');
         var room = validAccessAndReturnRoom(socket, chatobject, fn);
         if (typeof room === 'object') {
-            if (chatobject.usertype === 'broadcaster') {
+            if (chatobject.usertype === 'broadcaster' && room.validateBroadcasterIdentifier(chatobject)) {
+                console.log('OK');
                 fn({
                     status: true,
                     mute  : room.setMute(mute_usertype, value)
                 });
+
+                return;
             } else {
+                console.log('error: your_not_a_broadcaster ' + chatobject.broadcaster_identifier);
                 fn({
                     status : false,
                     'error': 'your_not_a_broadcaster'
                 });
+
+                return;
             }
         }
 
