@@ -121,7 +121,7 @@ function validAccessAndReturnRoom(socket, chatobject, fn) {
  * Send the chat message buffers to the server
  * Note: this also executed on error / termination
  */
-function sendBuffers() {
+function sendBuffersAndCleaning(bufferSend) {
     console.log('Send Buffers');
     // loop
     for (var namespace in rooms) {
@@ -136,12 +136,19 @@ function sendBuffers() {
                     // send to a server
                     room.forwardMessagesToDBServer(bufferSend);
                 }
+
+                if (room.getUserCount() == 0) {
+                    console.log('Delete room' );
+                    delete rooms[namespace][roomname];
+                }
             }
         }
     }
+    console.log('Buffers loop end');
 }
 
 function bufferSend() {
+    console.log('buffersendonexit = true');
     buffersendonexit = true;
 }
 
@@ -178,7 +185,6 @@ io.sockets.on("connection", function (socket) {
                     // send to a server
                     room.forwardMessagesToDBServer();
                 }
-                delete room;
 
                 fn({status: true});
                 return;
@@ -276,8 +282,19 @@ io.sockets.on("connection", function (socket) {
             if (room.removeUser(socket.id)) {
 
                 if (room.getUserCount() == 0) {
-                    console.log('Nobody in the room anymore.. we should cleanup');
-                    room.cleanup();
+                    console.log('Nobody in the room anymore.. we should delete the room');
+
+                    // cleanup prevent empty rooms
+                    var count = room.getMessagesCount();
+                    console.log('Messages: ' + count);
+
+                    if (count > 0) {
+                        // send to a server
+                        room.forwardMessagesToDBServer();
+                    }
+
+                    console.log('Delete room' );
+                    delete rooms[socket.namespace][roomname];
                 }
 
                 console.log('update-user-list');
@@ -300,9 +317,9 @@ io.sockets.on("connection", function (socket) {
 });
 
 // Send the room buffers to DB servers
-var interval = setInterval(function () {
+var intervalCron = setInterval(function () {
     console.log('Cron check buffers');
-    sendBuffers();
+    sendBuffersAndCleaning(false);
 }, 60000); // 1 minute
 
 // so the program will not close instantly
@@ -315,18 +332,33 @@ process.stdin.resume();
  */
 
 function exitHandler(options, err) {
+
+    try{
+        // stop the cron
+        clearInterval(intervalCron);
+    }catch(e){
+
+    }
+
     if (err) {
+        // log real errors to console
         console.log(err.stack);
     }
     if (options.exit && buffersendonexit === false) {
         buffersendonexit = 0;
-        sendBuffers();
-        // delay for posting to the DB servers
+
+        // Send chat logs DB servers before we exit
+        sendBuffersAndCleaning(bufferSend);
+
+        // delay exit for posting to the DB servers
         setInterval(function(){
+            console.log('.');
+            
             if(buffersendonexit === true){
+                // the real exit
                 process.exit();
             }
-        } ,100);
+        } ,500);
     }
 }
 

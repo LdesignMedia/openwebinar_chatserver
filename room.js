@@ -173,13 +173,6 @@ Room.prototype.getUserCount = function () {
     return _.size(this.users);
 };
 
-/**
- * cleanup
- */
-Room.prototype.cleanup = function () {
-    console.log('@todo send data to callback server');
-
-};
 
 /**
  * Return all users
@@ -260,7 +253,9 @@ Room.prototype.forwardMessagesToDBServer = function (bufferSendCallBack) {
             console.log(info);
 
             // save status of the buffer
-            bufferSendCallBack();
+            if(typeof bufferSendCallBack === 'function'){
+                bufferSendCallBack();
+            }
         }
         else {
             console.log('Error happened: ' + error);
