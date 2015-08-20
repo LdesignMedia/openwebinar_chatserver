@@ -33,6 +33,7 @@ server.listen(config.port, function () {
 // Data Holders
 var rooms = {};
 var sockets = [];
+var buffersendonexit = false;
 
 io.on('connection', function (client) {
     var address = client.handshake.address;
@@ -114,6 +115,34 @@ function validAccessAndReturnRoom(socket, chatobject, fn) {
         return rooms[socket.namespace][roomname];
     }
     return false;
+}
+
+/**
+ * Send the chat message buffers to the server
+ * Note: this also executed on error / termination
+ */
+function sendBuffers() {
+    console.log('Send Buffers');
+    // loop
+    for (var namespace in rooms) {
+        if (rooms.hasOwnProperty(namespace)) {
+            for (var roomname in rooms[namespace]) {
+                console.log(roomname);
+                var room = rooms[namespace][roomname];
+                var count = room.getMessagesCount();
+                console.log('Messages: ' + count);
+
+                if (count > 0) {
+                    // send to a server
+                    room.forwardMessagesToDBServer(bufferSend);
+                }
+            }
+        }
+    }
+}
+
+function bufferSend() {
+    buffersendonexit = true;
 }
 
 io.sockets.on("connection", function (socket) {
@@ -273,26 +302,39 @@ io.sockets.on("connection", function (socket) {
 // Send the room buffers to DB servers
 var interval = setInterval(function () {
     console.log('Cron check buffers');
-
-    // Loop
-    for (var namespace in rooms) {
-        console.log(namespace);
-        for (var roomname in rooms[namespace]) {
-            console.log(roomname);
-
-            var room = rooms[namespace][roomname];
-            var count = room.getMessagesCount();
-            console.log('Messages: ' + count);
-
-            if (count > 0) {
-                // send to a server
-                room.forwardMessagesToDBServer();
-            }
-        }
-    }
-
+    sendBuffers();
 }, 60000); // 1 minute
 
-// @todo On failure clear buffers
+// so the program will not close instantly
+process.stdin.resume();
 
-// @todo On close clear buffers
+/**
+ * Execute on error or termination
+ * @param options
+ * @param err
+ */
+
+function exitHandler(options, err) {
+    if (err) {
+        console.log(err.stack);
+    }
+    if (options.exit && buffersendonexit === false) {
+        buffersendonexit = 0;
+        sendBuffers();
+        // delay for posting to the DB servers
+        setInterval(function(){
+            if(buffersendonexit === true){
+                process.exit();
+            }
+        } ,100);
+    }
+}
+
+//do something when app is closing
+process.on('exit', exitHandler.bind(null, {exit: true}));
+
+//catches ctrl+c event
+process.on('SIGINT', exitHandler.bind(null, {exit: true}));
+
+//catches uncaught exceptions
+process.on('uncaughtException', exitHandler.bind(null, {exit: true}));

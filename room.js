@@ -97,7 +97,7 @@ Room.prototype.setMute = function (userType, value) {
             return this.mute_teacher;
     }
     return null;
-}
+};
 
 /**
  * Validate the broadcaster_identifier
@@ -105,15 +105,9 @@ Room.prototype.setMute = function (userType, value) {
  * @returns {boolean}
  */
 Room.prototype.validateBroadcasterIdentifier = function (chatobject) {
-
     console.log(this.broadcaster_identifier);
-    if (chatobject.broadcaster_identifier !== "" &&
-        this.broadcaster_identifier === chatobject.broadcaster_identifier) {
-
-        return true;
-    }
-    return false;
-}
+    return (chatobject.broadcaster_identifier !== "" && this.broadcaster_identifier === chatobject.broadcaster_identifier);
+};
 
 /**
  * Check if a user can type
@@ -138,7 +132,7 @@ Room.prototype.canType = function (chatobject) {
     }
 
     return false;
-}
+};
 
 /**
  * remove a user from a user
@@ -223,13 +217,22 @@ Room.prototype.addMessage = function (messageObject, messagetype) {
     return msg;
 };
 
+/**
+ * Remove messages from the buffer that already been send to DB server
+ * @param size int
+ */
 Room.prototype.updateBufferSize = function (size) {
     this.messageBuffer.splice(0, size);
-}
+};
 
-Room.prototype.forwardMessagesToDBServer = function () {
+/**
+ * Send messages to a DB server to have a chat history
+ */
+Room.prototype.forwardMessagesToDBServer = function (bufferSendCallBack) {
     var that = this; // reference needed for callback
     var buffer = _.clone(this.messageBuffer);
+
+    console.log(this.callback + '?action=chatlog');
 
     var options = {
         url    : this.callback + '?action=chatlog',
@@ -255,6 +258,9 @@ Room.prototype.forwardMessagesToDBServer = function () {
             }
 
             console.log(info);
+
+            // save status of the buffer
+            bufferSendCallBack();
         }
         else {
             console.log('Error happened: ' + error);
