@@ -91,10 +91,11 @@ function join(socket, chatobject, fn) {
 
 /**
  * Validate the call and return a room object
- * @param socket
- * @param chatobject
- * @param fn
- * @returns Room|false
+ *
+ * @param {object} socket
+ * @param {object} chatobject
+ * @param {function} fn
+ * @returns {Room|boolean}
  */
 function validAccessAndReturnRoom(socket, chatobject, fn) {
 
@@ -127,7 +128,7 @@ function sendBuffersAndCleaning(bufferSend) {
     for (var namespace in rooms) {
         if (rooms.hasOwnProperty(namespace)) {
             for (var roomname in rooms[namespace]) {
-                console.log(roomname);
+                console.log('Roomname: ' + roomname);
                 var room = rooms[namespace][roomname];
                 var count = room.getMessagesCount();
                 console.log('Messages: ' + count);
@@ -225,7 +226,7 @@ io.sockets.on("connection", function (socket) {
 
                 return;
             } else {
-                console.log('error: your_not_a_broadcaster ' + chatobject.broadcaster_identifier);
+                console.log('error: your_not_a_broadcaster ' + chatobject.broadcaster_identifier + ' usertype:' + chatobject.usertype);
                 fn({
                     status : false,
                     'error': 'your_not_a_broadcaster'
@@ -327,10 +328,10 @@ process.stdin.resume();
 
 /**
  * Execute on error or termination
+ *
  * @param options
  * @param err
  */
-
 function exitHandler(options, err) {
 
     try{

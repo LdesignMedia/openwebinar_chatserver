@@ -7,10 +7,14 @@ var request = require('request');
 
 // Useragent parser
 var userAgentParser = require('ua-parser-js');
+
 /**
  * Room
- * @param name
- * @param namespace
+ *
+ * @param {string} name
+ * @param {string} namespace
+ * @param {string} callback url to send callbacks to
+ * @param {string} shared_secret
  * @constructor
  */
 function Room(name, namespace, callback, shared_secret) {
@@ -56,6 +60,7 @@ function Room(name, namespace, callback, shared_secret) {
 
 /**
  * Add a user to a room
+ *
  * @param chatobject
  */
 Room.prototype.addUser = function (chatobject) {
@@ -77,6 +82,7 @@ Room.prototype.addUser = function (chatobject) {
 
 /**
  * Mute a user for typing
+ *
  * @param userType
  * @param value
  * @returns {*}
@@ -101,18 +107,20 @@ Room.prototype.setMute = function (userType, value) {
 
 /**
  * Validate the broadcaster_identifier
+ *
  * @param chatobject
  * @returns {boolean}
  */
 Room.prototype.validateBroadcasterIdentifier = function (chatobject) {
-    console.log(this.broadcaster_identifier);
+    console.log(this.broadcaster_identifier + ' - ' + chatobject.broadcaster_identifier);
     return (chatobject.broadcaster_identifier !== "" && this.broadcaster_identifier === chatobject.broadcaster_identifier);
 };
 
 /**
  * Check if a user can type
- * @param chatobject
- * @returns boolean
+ *
+ * @param {object} chatobject
+ * @returns {boolean}
  */
 Room.prototype.canType = function (chatobject) {
 
@@ -135,8 +143,10 @@ Room.prototype.canType = function (chatobject) {
 };
 
 /**
- * remove a user from a user
- * @param id
+ * Remove a user from a user
+ *
+ * @param {int} id
+ * @returns {boolean}
  */
 Room.prototype.removeUser = function (id) {
 
@@ -157,7 +167,8 @@ Room.prototype.removeUser = function (id) {
 
 /**
  * Messages in the buffer
- * return int
+ *
+ * @returns {int}
  */
 Room.prototype.getMessagesCount = function () {
     console.log('getMessagesCount ' + this.name);
@@ -166,17 +177,18 @@ Room.prototype.getMessagesCount = function () {
 
 /**
  * Users in this room
- * return int
+ *
+ * @returns {int}
  */
 Room.prototype.getUserCount = function () {
     console.log('getUserCount ' + this.name);
     return _.size(this.users);
 };
 
-
 /**
  * Return all users
- * return array
+ *
+ * @returns {Array}
  */
 Room.prototype.getAllUsers = function () {
     // @todo maybe some parsing not everything need to be send to clients
@@ -184,8 +196,10 @@ Room.prototype.getAllUsers = function () {
 };
 
 /**
- * messageObject
- * @param messageObject
+ * Add a message to room
+ *
+ * @param {object} messageObject
+ * @param {string} messagetype
  */
 Room.prototype.addMessage = function (messageObject, messagetype) {
 
@@ -212,7 +226,8 @@ Room.prototype.addMessage = function (messageObject, messagetype) {
 
 /**
  * Remove messages from the buffer that already been send to DB server
- * @param size int
+ *
+ * @param {int} size int
  */
 Room.prototype.updateBufferSize = function (size) {
     this.messageBuffer.splice(0, size);
@@ -253,7 +268,7 @@ Room.prototype.forwardMessagesToDBServer = function (bufferSendCallBack) {
             console.log(info);
 
             // save status of the buffer
-            if(typeof bufferSendCallBack === 'function'){
+            if (typeof bufferSendCallBack === 'function') {
                 bufferSendCallBack();
             }
         }
