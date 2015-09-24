@@ -30,7 +30,7 @@ function Room(name, namespace, callback, shared_secret) {
     this.users = [];
     this.messageBuffer = [];
 
-    var that    = this, // reference needed for callback
+    var that    = this,
         options = {
             url    : callback + '?action=broadcastinfo',
             method : "POST",
@@ -48,8 +48,9 @@ function Room(name, namespace, callback, shared_secret) {
     request(options, function (error, response, body) {
         if (!error) {
             var info = JSON.parse(JSON.stringify(body));
+            console.log(info);
             if (info.status === true) {
-                that.broadcaster_identifier = info.webcast.broadcaster_identifier;
+                that.broadcaster_identifier = info.openwebinar.broadcaster_identifier;
             }
         }
         else {
@@ -70,7 +71,7 @@ Room.prototype.addUser = function (chatobject) {
     delete usr.hostname;
     delete usr.courseid;
     delete usr.cmid;
-    delete usr.webcastid;
+    delete usr.openwebinarid;
     delete usr.shared_secret;
     delete usr.message;
 
@@ -214,7 +215,7 @@ Room.prototype.addMessage = function (messageObject, messagetype) {
     delete msg.hostname;
     delete msg.courseid;
     delete msg.cmid;
-    delete msg.webcastid;
+    delete msg.openwebinarid;
     delete msg.shared_secret;
 
     // Cleanup the string for save usage
@@ -266,14 +267,14 @@ Room.prototype.forwardMessagesToDBServer = function (bufferSendCallBack) {
             }
 
             console.log(info);
-
-            // save status of the buffer
-            if (typeof bufferSendCallBack === 'function') {
-                bufferSendCallBack();
-            }
         }
         else {
             console.log('Error happened: ' + error);
+        }
+
+
+        if (typeof bufferSendCallBack === 'function') {
+            bufferSendCallBack();
         }
     });
 };

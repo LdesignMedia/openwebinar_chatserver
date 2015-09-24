@@ -139,7 +139,7 @@ function sendBuffersAndCleaning(bufferSend) {
                 }
 
                 if (room.getUserCount() == 0) {
-                    console.log('Delete room' );
+                    console.log('Delete room');
                     delete rooms[namespace][roomname];
                 }
             }
@@ -167,7 +167,7 @@ io.sockets.on("connection", function (socket) {
     });
 
     /**
-     * End the webcast & unload/remove the room from chat server
+     * End the openwebinar & unload/remove the room from chat server
      */
     socket.on("ending", function (chatobject, fn) {
         var room = validAccessAndReturnRoom(socket, chatobject, fn);
@@ -175,7 +175,7 @@ io.sockets.on("connection", function (socket) {
             if (chatobject.usertype === 'broadcaster' && room.validateBroadcasterIdentifier(chatobject)) {
                 console.log('OK');
                 // only the broadcaster can do this
-                io.sockets.in(room.name).emit("webcast-ended", {
+                io.sockets.in(room.name).emit("openwebinar-ended", {
                     status: true
                 });
 
@@ -294,7 +294,7 @@ io.sockets.on("connection", function (socket) {
                         room.forwardMessagesToDBServer();
                     }
 
-                    console.log('Delete room' );
+                    console.log('Delete room');
                     delete rooms[socket.namespace][roomname];
                 }
 
@@ -334,10 +334,12 @@ process.stdin.resume();
  */
 function exitHandler(options, err) {
 
-    try{
+    var i = 0;
+
+    try {
         // stop the cron
         clearInterval(intervalCron);
-    }catch(e){
+    } catch (e) {
 
     }
 
@@ -345,6 +347,7 @@ function exitHandler(options, err) {
         // log real errors to console
         console.log(err.stack);
     }
+
     if (options.exit && buffersendonexit === false) {
         buffersendonexit = 0;
 
@@ -352,14 +355,16 @@ function exitHandler(options, err) {
         sendBuffersAndCleaning(bufferSend);
 
         // delay exit for posting to the DB servers
-        setInterval(function(){
-            console.log('.');
-            
-            if(buffersendonexit === true){
+        setInterval(function () {
+            console.log('.' + i);
+
+            if (buffersendonexit === true || i == 20) {
                 // the real exit
                 process.exit();
             }
-        } ,500);
+
+            i++;
+        }, 500);
     }
 }
 
