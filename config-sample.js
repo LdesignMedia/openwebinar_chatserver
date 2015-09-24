@@ -1,5 +1,5 @@
 /**
- * This a sample file you will need to rename this file to config.js also update it with your credentials
+ * This a sample file you will need to rename this file to config.js also update it with your environment details
  */
 var config = {};
 
@@ -8,8 +8,11 @@ config.servers = {
     /**
      * Shared secret
      *
+     * A possible way to generate a random secret is by running the following command from a unix shell:
+     * tr -c -d '0123456789abcdefghijklmnopqrstuvwxyz' </dev/urandom | dd bs=32 count=1 2>/dev/null;echo
+     *
      * also added to MoodleFreak Webcast settings
-     * /admin/settings.php?section=modsettingwebcast
+     * /admin/settings.php?section=modsettingopenwebinar
      */
     'abcd123456789': {
 
@@ -27,9 +30,9 @@ config.servers = {
 
         /**
          * Callback url for saving the message buffer to moodle1
-         * Should always end with this /mod/webcast/api.php?action=chatlog
+         * Should always end with this /mod/openwebinar/api.php?action=chatlog
          */
-        callback : 'http://example.com/mod/webcast/api.php?action=chatlog'
+        callback : 'http://example.com/mod/openwebinar/api.php?action=chatlog'
     },
 
     /**
@@ -38,7 +41,7 @@ config.servers = {
      * 'dcba987654321': {
         hostname : 'example2.com',
         namespace : 'example2_live',
-        callback : 'http://example2.com/mod/webcast/api.php?action=chatlog'
+        callback : 'http://example2.com/mod/openwebinar/api.php?action=chatlog'
         },
      */
 };

@@ -43,7 +43,7 @@ List of features
   
 Installation
 ====================
-1.  @todo rewrite a installation guide
+1.  @todo write a installation guide
 
 
 FAQ
