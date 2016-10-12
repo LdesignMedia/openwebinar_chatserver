@@ -43,6 +43,10 @@ function Room(name, namespace, callback, shared_secret) {
             }
         };
 
+    if(this.name.indexOf("_pm_") >  -1){
+        // Skip validating room from moodle.
+        return;
+    }
     // query the broadcast identifier for validation
     // send request
     request(options, function (error, response, body) {
@@ -77,8 +81,24 @@ Room.prototype.addUser = function (chatobject) {
 
     // convert useragent to something more usable
     usr.useragent = userAgentParser(usr.useragent);
-    console.log(usr.useragent);
+    console.log('Add User');
+    console.log(usr.id);
+    console.log(usr.fullname);
     this.users.push(usr);
+};
+
+/**
+ * getSocketByUserId
+ *
+ * @param chatobject
+ * @param to_user_id
+ */
+Room.prototype.getSocketByUserId = function (chatobject, to_user_id) {
+    var user = _.findWhere(this.users, {'userid' : parseInt(to_user_id)});
+    if (!user) {
+        return false;
+    }
+    return user.id;
 };
 
 /**
@@ -256,7 +276,7 @@ Room.prototype.forwardMessagesToDBServer = function (bufferSendCallBack) {
         }
     };
 
-    //send request
+    // Send request.
     request(options, function (error, response, body) {
         if (!error) {
             var info = JSON.parse(JSON.stringify(body));

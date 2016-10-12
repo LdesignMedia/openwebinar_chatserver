@@ -12,7 +12,19 @@ module.exports = function Util() {
          * @returns {*}
          */
         getRoomNameFromChatobject: function (chatobject) {
-            return chatobject.broadcastkey + chatobject.room;
+            var append = '';
+            // Private messages rooms.
+            if (chatobject.pm_userid !== undefined) {
+                // Ending up with same room naming.
+                append += '_pm_';
+                if(chatobject.pm_userid > chatobject.userid){
+                    append += chatobject.pm_userid + '_' + chatobject.userid;
+                }else{
+                    append += chatobject.userid + '_' + chatobject.pm_userid;
+                }
+            }
+
+            return chatobject.broadcastkey + chatobject.room + append;
         },
 
         /**

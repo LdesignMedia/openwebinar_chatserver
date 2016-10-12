@@ -43,9 +43,9 @@ io.on('connection', function (client) {
 function join(socket, chatobject, fn) {
 
     console.log("join");
-    console.log(chatobject);
+    // console.log(chatobject);
 
-    // validate key/host
+    // Validate key/host.
     var valid = Util.validToken(chatobject.shared_secret, chatobject.hostname);
     if (!valid.status) {
         console.log(valid.error);
@@ -53,37 +53,39 @@ function join(socket, chatobject, fn) {
         return;
     }
 
-    // We can continue
+    // We can continue.
     chatobject.id = socket.id;
     socket.has_access = true;
     socket.namespace = valid.namespace;
 
-    // Check if the roomnamespace is set
+    // Check if the roomnamespace is set.
     if (rooms[socket.namespace] === undefined) {
         rooms[socket.namespace] = [];
     }
 
-    // Use namespace to allow more environment to connect
+    // Use namespace to allow more environment to connect.
     var roomname = Util.getRoomNameFromChatobject(chatobject);
     if (rooms[socket.namespace][roomname] === undefined) {
         rooms[socket.namespace][roomname] = new Room(roomname, socket.namespace, valid.callback, chatobject.shared_secret);
     }
 
-    // Reference
+    // Reference.
     var room = rooms[socket.namespace][roomname];
     room.addUser(chatobject);
 
-    // Join the room
+    // Join the room.
     socket.join(roomname).in(socket.namespace);
 
-    // Only send userlist update to correct room
-    io.sockets.in(roomname).emit("update-user-list", {
-        users : room.getAllUsers(),
-        count : room.getUserCount(),
-        status: true
-    });
+    // Only send userlist update to correct room.
+    if(roomname.indexOf("_pm_") ===  -1){
+        io.sockets.in(roomname).emit("update-user-list", {
+            users : room.getAllUsers(),
+            count : room.getUserCount(),
+            status: true
+        });
+    }
 
-    // Add the socket to a container
+    // Add the socket to a container.
     sockets.push(socket);
 
     fn({'status': true});
@@ -238,6 +240,42 @@ io.sockets.on("connection", function (socket) {
 
         fn({status: false});
     });
+
+    /**
+     * Notice a user in the main room
+     */
+    socket.on("send-notice-user", function (chatobject, to_user_id, fn) {
+        console.log('send-notice-user');
+        var room = validAccessAndReturnRoom(socket, chatobject, fn);
+
+        if (typeof room === 'object') {
+
+            // Send to clients
+            console.log(to_user_id);
+            var socketidclient = room.getSocketByUserId(chatobject, to_user_id);
+
+            if (socketidclient) {
+                console.log('send:' + socketidclient);
+                chatobject.timestamp = Math.round(new Date().getTime() / 1000);
+                io.to(socketidclient).emit("new-incoming-private-message", chatobject);
+                fn({'status': true});
+            } else {
+                console.log('user not connected anymore');
+                fn({
+                    'status' : false,
+                    'message': 'user not connected anymore'
+                });
+            }
+
+        } else {
+            console.log('unknown_room');
+            fn({
+                'status': false,
+                'error' : 'unknown_room'
+            });
+        }
+    });
+
 
     /**
      * Send a chat message to the room clients
