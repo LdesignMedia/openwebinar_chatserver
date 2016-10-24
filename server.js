@@ -9,10 +9,17 @@
  **/
 
 // Includes
+var fs = require('fs');
 var config = require('./config');
 var express = require('express');
 var app = express();
-var server = require('http').createServer(app);
+var options = {
+    key: fs.readFileSync('./file.pem'),
+    cert: fs.readFileSync('./file.crt'),
+    requestCert: false,
+    rejectUnauthorized: false
+};
+var server = require('https').createServer(options, app);
 var io = require("socket.io")(server);
 
 // Rigorous implementation of RFC4122 (v1 and v4) UUIDs.

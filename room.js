@@ -47,11 +47,14 @@ function Room(name, namespace, callback, shared_secret) {
         // Skip validating room from moodle.
         return;
     }
+
+    console.log(options);
     // query the broadcast identifier for validation
     // send request
     request(options, function (error, response, body) {
         if (!error) {
             var info = JSON.parse(JSON.stringify(body));
+            console.log(body);
             console.log(info);
             if (info.status === true) {
                 that.broadcaster_identifier = info.openwebinar.broadcaster_identifier;
