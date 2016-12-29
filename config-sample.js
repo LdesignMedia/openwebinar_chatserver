@@ -2,7 +2,8 @@
  * This a sample file you will need to rename this file to config.js also update it with your environment details
  */
 var config = {};
-
+config.ssl_key = '/home/example.com/homedir/ssl/domain.key'; // Replace by real path
+config.ssl_cert = '/home/example.com/homedir/ssl/domain.crt'; // Replace by real path
 config.servers = {
 
     /**

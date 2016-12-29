@@ -14,8 +14,8 @@ var config = require('./config');
 var express = require('express');
 var app = express();
 var options = {
-    key: fs.readFileSync('./file.pem'),
-    cert: fs.readFileSync('./file.crt'),
+    key: fs.readFileSync(config.ssl_key),
+    cert: fs.readFileSync(config.ssl_cert),
     requestCert: false,
     rejectUnauthorized: false
 };
