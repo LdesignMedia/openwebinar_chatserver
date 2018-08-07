@@ -1,0 +1,33 @@
+{
+  "name": "moodlefreak-chat",
+  "version": "1.0.0",
+  "description": "Moodlefreak webinar chat engine\r ====================\r This is chat/communication engine special developed for [moodle activity openwebinar](https://github.com/MoodleFreak/moodle_mod_openwebinar)",
+  "main": "config-sample.js",
+  "dependencies": {
+    "caja-sanitizer": "^0.1.2",
+    "express": "^4.16.3",
+    "fs": "^0.0.1-security",
+    "https": "^1.0.0",
+    "node-uuid": "^1.4.8",
+    "request": "^2.87.0",
+    "socket.io": "^2.1.1",
+    "ua-parser-js": "^0.7.18",
+    "underscore": "^1.9.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoodleFreak/openwebinar_chatserver.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MoodleFreak/openwebinar_chatserver/issues"
+  },
+  "homepage": "https://github.com/MoodleFreak/openwebinar_chatserver#readme"
+}

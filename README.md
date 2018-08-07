@@ -43,8 +43,10 @@ List of features
   
 Installation
 ====================
-1.  @todo write a installation guide
+1. Install project to /opt/moodle-chatserver/
 
+### Socket file / embed to the chat server.
+https://#DOMAIN#:3001//socket.io/socket.io.js
 
 FAQ
 ====================

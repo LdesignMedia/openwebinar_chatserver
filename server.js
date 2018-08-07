@@ -44,7 +44,7 @@ var buffersendonexit = false;
 
 io.on('connection', function (client) {
     var address = client.handshake.address;
-    console.log("New connection from " + address);
+   // console.log("New connection from " + address);
 });
 
 function join(socket, chatobject, fn) {
@@ -320,7 +320,7 @@ io.sockets.on("connection", function (socket) {
      * Client disconnect
      */
     socket.on("disconnect", function () {
-        console.log("disconnect");
+     //   console.log("disconnect");
 
         // Remove this user from all possible rooms
         for (var roomname in rooms[socket.namespace]) {
